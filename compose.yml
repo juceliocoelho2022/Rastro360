@@ -1,0 +1,30 @@
+services:
+  database:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: rastro360
+      POSTGRES_USER: rastro360
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Configure DB_PASSWORD no .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rastro360 -d rastro360"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: postgres
+      DB_URL: jdbc:postgresql://database:5432/rastro360
+      DB_USERNAME: rastro360
+      DB_PASSWORD: ${DB_PASSWORD:?Configure DB_PASSWORD no .env}
+      APP_USERNAME: ${APP_USERNAME:?Configure APP_USERNAME no .env}
+      APP_PASSWORD: ${APP_PASSWORD:?Configure APP_PASSWORD no .env}
+    depends_on:
+      database:
+        condition: service_healthy
+volumes:
+  postgres_data:
