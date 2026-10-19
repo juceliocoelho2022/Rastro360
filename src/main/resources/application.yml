@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: rastro360
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  jackson:
+    time-zone: UTC
+  flyway:
+    enabled: true
+server:
+  port: ${PORT:8080}
+app:
+  security:
+    username: ${APP_USERNAME:operador}
+    password: ${APP_PASSWORD:dev12345}
