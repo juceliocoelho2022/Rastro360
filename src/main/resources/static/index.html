@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rastro360 | Central de rastreabilidade</title>
+  <link rel="stylesheet" href="/assets/style.css" />
+  <script defer src="/assets/app.js"></script>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">R</span><span>Rastro<span class="accent">360</span><small>Controle de ponta a ponta</small></span></div>
+      <div class="sidebar-label">OPERAÇÃO</div>
+      <nav aria-label="Navegação principal">
+        <button class="nav active" data-tab="overview"><span>▦</span> Visão geral</button>
+        <button class="nav" data-tab="production"><span>▤</span> Produção e cadastro</button>
+        <button class="nav" data-tab="warehouse"><span>⇄</span> Movimentação interna</button>
+        <button class="nav" data-tab="shipping"><span>▣</span> Expedição e entrega</button>
+        <button class="nav" data-tab="trace"><span>⌕</span> Histórico do produto</button>
+      </nav>
+      <div class="sidebar-note"><strong>Fluxo rastreável</strong><p>Produção → Estoque → Doca → Caminhão → Cliente</p></div>
+    </aside>
+    <main class="main">
+      <div class="topbar"><span class="topbar-label">PAINEL OPERACIONAL <span class="divider-dot">•</span> MVP 0.1</span><span class="online"><i></i> Sistema local</span></div>
+      <section id="tab-overview" class="tab active">
+        <div class="page-header"><div><div class="eyebrow">INTELIGÊNCIA OPERACIONAL</div><h1>Visão geral da operação</h1><p>Acompanhe os volumes desde a fabricação até a confirmação de entrega.</p></div><button class="btn secondary" id="refreshBtn">↻ Atualizar</button></div>
+        <div class="stats" id="stats"></div>
+        <div class="section-head"><h2>Jornada de rastreabilidade</h2><span>Etapas monitoradas</span></div>
+        <div class="flowline"><div><b>01</b><strong>Produção</strong><small>Produto e lote</small></div><div><b>02</b><strong>Estoque</strong><small>Localização interna</small></div><div><b>03</b><strong>Carregamento</strong><small>Veículo e remessa</small></div><div><b>04</b><strong>Transporte</strong><small>Saída e chegada</small></div><div><b>05</b><strong>Entrega</strong><small>Recebimento</small></div></div>
+        <div class="section-head"><h2>Últimos volumes</h2><button class="linkbtn" data-switch="trace">Pesquisar código ↗</button></div>
+        <div class="panel table-wrap"><table><thead><tr><th>Código de rastreio</th><th>Produto / Lote</th><th>Local ou remessa</th><th>Status</th></tr></thead><tbody id="overviewUnits"></tbody></table></div>
+      </section>
+      <section id="tab-production" class="tab">
+        <div class="page-header"><div><div class="eyebrow">ETAPA 01</div><h1>Produção e cadastros</h1><p>Cadastre o catálogo, identifique um lote e gere um código exclusivo por volume.</p></div></div>
+        <div class="columns">
+          <div class="panel"><h2>Registrar volume produzido</h2><p class="subtle">Um volume pode representar uma caixa ou um palete indivisível.</p>
+            <form id="produceForm" class="form"><label>Produto<select required name="productId" id="productSelect"></select></label><label>Lote de fabricação<input required maxlength="80" name="lot" placeholder="Ex.: LOTE-2026-010" /></label><label>Quantidade neste volume<input required type="number" min="1" name="quantity" value="1" /></label><label>Linha de produção<select required name="locationId" id="productionLocationSelect"></select></label><button class="btn" type="submit">+ Gerar código de rastreio</button></form>
+          </div>
+          <div class="stack"><div class="panel"><h2>Cadastrar produto</h2><form class="form" id="productForm"><label>SKU<input required name="sku" maxlength="60" placeholder="SKU-001" /></label><label>Nome<input required name="name" maxlength="180" placeholder="Caixa de produto acabado" /></label><label>Unidade de medida<input required name="unit" maxlength="20" value="un" /></label><button class="btn secondary" type="submit">Salvar produto</button></form></div>
+          <div class="panel"><h2>Cadastrar localização</h2><form id="locationForm" class="form"><label>Código do local<input required name="code" maxlength="40" placeholder="EST-02" /></label><label>Descrição<input required name="name" maxlength="160" placeholder="Estoque secundário" /></label><label>Tipo<select name="kind"><option value="PRODUCAO">Produção</option><option value="ESTOQUE" selected>Estoque</option><option value="EXPEDICAO">Expedição</option></select></label><button class="btn secondary" type="submit">Salvar local</button></form></div></div>
+        </div>
+      </section>
+      <section id="tab-warehouse" class="tab">
+        <div class="page-header"><div><div class="eyebrow">ETAPA 02</div><h1>Movimentações internas</h1><p>Registre a passagem entre setores, estoque e docas. Nenhuma etapa anterior é apagada.</p></div></div>
+        <div class="columns"><div class="panel"><h2>Transferir volume</h2><form id="moveForm" class="form"><label>Volume<select required name="unitId" id="moveUnitSelect"></select></label><label>Local de destino<select required name="destinationLocationId" id="destinationSelect"></select></label><label>Observação (opcional)<textarea name="details" rows="3" maxlength="400" placeholder="Ex.: Transferido para separação de pedidos"></textarea></label><button type="submit" class="btn">Registrar movimentação</button></form></div>
+        <div class="panel"><h2>Regras do estoque</h2><div class="rule"><span>✓</span><p><strong>Rastreabilidade por volume</strong><br>O mesmo identificador acompanha cada etapa.</p></div><div class="rule"><span>✓</span><p><strong>Passagem obrigatória pela doca</strong><br>O carregamento exige localização de expedição.</p></div><div class="rule"><span>✓</span><p><strong>Histórico preservado</strong><br>Novos eventos não substituem os anteriores.</p></div><div class="rule"><span>✓</span><p><strong>Bloqueio após carregamento</strong><br>Um volume não pode entrar em dois caminhões.</p></div></div></div>
+      </section>
+      <section id="tab-shipping" class="tab">
+        <div class="page-header"><div><div class="eyebrow">ETAPAS 03—05</div><h1>Expedição e entregas</h1><p>Crie remessas, vincule volumes ao caminhão, despache e registre a chegada ao cliente.</p></div></div>
+        <div class="columns"><div class="panel"><h2>Nova remessa</h2><form id="shipmentForm" class="form"><label>Placa do caminhão<input required maxlength="20" name="truckPlate" placeholder="ABC1D23" /></label><label>Nome do motorista<input required maxlength="150" name="driverName" placeholder="Nome completo" /></label><label>Nome do cliente<input required maxlength="180" name="customerName" placeholder="Cliente / empresa" /></label><label>Endereço de entrega<textarea required maxlength="350" rows="2" name="customerAddress" placeholder="Logradouro, número, cidade e UF"></textarea></label><button class="btn" type="submit">+ Criar remessa</button></form></div>
+        <div class="panel"><h2>Carregar caminhão</h2><p class="subtle">Volumes disponíveis na doca de expedição.</p><form id="loadForm" class="form"><label>Remessa em preparação<select required name="shipmentId" id="shipmentSelect"></select></label><label>Volume na doca<select required name="unitId" id="loadUnitSelect"></select></label><button class="btn" type="submit">Confirmar carregamento</button></form><div class="info-note">Ao sair da doca, o volume passa a pertencer à remessa selecionada. O carregamento é bloqueado após a saída.</div></div></div>
+        <div class="section-head"><h2>Remessas e ações</h2><span>Avance etapa por etapa</span></div>
+        <div class="panel table-wrap"><table><thead><tr><th>Remessa / Caminhão</th><th>Destino</th><th>Status</th><th>Próxima ação</th></tr></thead><tbody id="shipmentsTable"></tbody></table></div>
+      </section>
+      <section id="tab-trace" class="tab">
+        <div class="page-header"><div><div class="eyebrow">AUDITORIA E CONSULTA</div><h1>Histórico do produto</h1><p>Consulte cada passagem do volume, do início da fabricação até a entrega.</p></div></div>
+        <div class="panel search-panel"><form id="traceForm" class="search-form"><label class="sr-only" for="trackingInput">Código de rastreio</label><input id="trackingInput" required name="trackingCode" placeholder="Digite ou escaneie o código RT-..." /><button class="btn" type="submit">Rastrear volume →</button></form></div>
+        <div id="traceResult" class="panel trace-result"><div class="empty">Informe um código para exibir a linha do tempo completa.</div></div>
+      </section>
+      <div class="footer">Rastro360 · MVP de rastreabilidade operacional · Eventos auditáveis por volume</div>
+    </main>
+  </div>
+  <div role="status" aria-live="polite" id="toast" class="toast" hidden></div>
+</body>
+</html>
