@@ -1,7 +1,9 @@
 target/
-.idea/
-.vscode/
-*.iml
+data/*
+!data/.gitkeep
 .env
 *.log
+.idea/
+.vscode/
 .DS_Store
+*.iml
