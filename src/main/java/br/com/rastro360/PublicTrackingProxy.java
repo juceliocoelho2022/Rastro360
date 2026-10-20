@@ -40,7 +40,7 @@ public final class PublicTrackingProxy implements AutoCloseable {
     public PublicTrackingProxy(int port, URI backend) throws IOException {
         if (backend == null || !"http".equalsIgnoreCase(backend.getScheme())
                 || !"127.0.0.1".equals(backend.getHost())
-                || backend.getPort() <= 0 || backend.getRawPath().length() > 0
+                || backend.getPort() <= 0 || (backend.getRawPath() != null && !backend.getRawPath().isEmpty())
                 || backend.getRawQuery() != null || backend.getRawFragment() != null) {
             throw new IllegalArgumentException("O backend deve ser http://127.0.0.1:<porta>.");
         }
