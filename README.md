@@ -54,7 +54,7 @@ O Docker Compose expõe o serviço somente em `127.0.0.1:8080`.
 
 ## Segurança e status
 
-**MVP 0.3.1 para desenvolvimento local.** Não publicar diretamente na internet com as credenciais de demonstração. Autenticação corporativa individual, RBAC, HTTPS, proteção CSRF, testes de carga e políticas de auditoria/privacidade precisam ser implementados antes de uso produtivo.
+**MVP 0.3.2 para desenvolvimento local.** Não publicar diretamente na internet com as credenciais de demonstração. Autenticação corporativa individual, RBAC, HTTPS, proteção CSRF, testes de carga e políticas de auditoria/privacidade precisam ser implementados antes de uso produtivo.
 
 > O pipeline CI executa Maven/Java 21 em cada PR e push para main; consulte o GitHub Actions para o resultado da revisão atual.
 
@@ -143,6 +143,17 @@ O formato **100 × 150 mm** foi refinado para melhorar a leitura e identificaç�
 **Como imprimir:** em **Histórico do produto**, abra o volume e clique em **Imprimir etiqueta QR**. Na caixa de impressão selecione papel **100 × 150 mm**, margens **nenhuma**, escala **100%**, sem cabeçalhos/rodapés. Em uma impressora térmica, configure o mesmo tamanho no driver. Use a pré-visualização para verificar cortes; uma prova de impressão física ainda é necessária antes de produção.
 
 A foto pode estar ausente ou indisponível sem impedir a emissão da etiqueta com QR. Esta versão é **apenas apresentação**: não altera tabelas, imagens armazenadas, produtos, volumes, remessas ou histórico de rastreabilidade. Os testes automatizados verificam a estrutura imprimível e continuam validando a decodificação do QR Code.
+
+## Etiqueta com foto à esquerda e QR à direita (v0.3.2)
+
+O layout aprovado da etiqueta de **100 × 150 mm** reserva duas colunas: foto do produto **à esquerda (até 40 × 58 mm)** e QR Code real **à direita (43 × 43 mm)**. A foto mantém a proporção original sem recorte, sendo mais visível para embalagens verticais. SKU, lote, quantidade e o código `RT-` continuam legíveis.
+
+- Para produtos com foto, as duas colunas aparecem lado a lado. Para produtos sem foto, a coluna desaparece e o QR é centralizado automaticamente.
+- O QR continua sendo gerado pelo mesmo endpoint e codifica a mesma URL de rastreio público da v0.3.1.
+- Na impressão, use papel **100 × 150 mm**, margens zero, escala **100%**, sem cabeçalhos e rodapés.
+- Esta atualização modifica apenas HTML/CSS e a identificação da versão: **nenhuma nova migração, alteração de banco, upload ou recadastro é necessário**.
+
+**Validação pendente em ambiente real:** confirmar a pré-visualização do navegador, imprimir uma etiqueta e escaneá-la no celular. Os testes de CI verificam a presença do QR e estrutura da página, mas não substituem prova física de impressão e leitura.
 
 ## Próximas funcionalidades
 
