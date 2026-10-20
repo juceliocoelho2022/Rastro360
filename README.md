@@ -54,7 +54,7 @@ O Docker Compose expõe o serviço somente em `127.0.0.1:8080`.
 
 ## Segurança e status
 
-**MVP 0.4.0 para desenvolvimento local.** Não publicar diretamente na internet com as credenciais de demonstração. Autenticação corporativa individual, RBAC, HTTPS, proteção CSRF, testes de carga e políticas de auditoria/privacidade precisam ser implementados antes de uso produtivo.
+**MVP 0.4.1 para desenvolvimento local.** Não publicar diretamente na internet com as credenciais de demonstração. Autenticação corporativa individual, RBAC, HTTPS, proteção CSRF, testes de carga e políticas de auditoria/privacidade precisam ser implementados antes de uso produtivo.
 
 > O pipeline CI executa Maven/Java 21 em cada PR e push para main; consulte o GitHub Actions para o resultado da revisão atual.
 
@@ -183,6 +183,69 @@ mvn spring-boot:run
 O domínio acima é somente **ilustrativo**: é necessário configurar a infraestrutura HTTPS e garantir que o domínio sirva a consulta e sua API antes de usar as etiquetas fora do laboratório.
 
 **Fluxo de prova:** configure e teste a URL pública no navegador anônimo de um celular, confirme uma consulta sem login, gere/reeimprima a etiqueta QR e valide o mesmo link pela câmera. Teste uma transferência, a saída e a entrega: a atualização do cliente deve aparecer em até 30 segundos com a aba aberta, se houver rede. Não publique o perfil dev com usuário `operador` e senha de demonstração.
+
+## HTTPS temporário no celular, sem domínio (v0.4.1)
+
+Este teste usa o **Cloudflare Quick Tunnel**, que fornece um endereço HTTPS aleatório terminado em trycloudflare.com, sem exigir domínio ou conta. Não é uma implantação de produção. **Jamais conecte o túnel diretamente à porta administrativa 8081.**
+
+O novo gateway Java escuta apenas 127.0.0.1:8090 e permite exclusivamente requisições GET para a página /tracking.html (com ou sem parâmetro code=RT-...) e para a API /api/public/track/RT-... com código válido. Todas as outras rotas, incluindo /api/products, /api/units, /api/shipments, /label.html e /scanner.html, retornam HTTP 404. Outros métodos retornam 405. O gateway não encaminha cabeçalhos de autenticação nem cookies.
+
+### Passo a passo — Windows PowerShell
+
+**Terminal 1: Spring Boot privado.** Pare o Spring Boot anterior com Ctrl+C e execute na raiz do projeto:
+
+    cd C:\Projetos\rastro360\Rastro360
+    git switch main
+    git pull --ff-only origin main
+    mvn clean verify
+    $env:PORT = "8081"
+    mvn spring-boot:run
+
+Mantenha aberto. Não rode initialize-dev-db.ps1 -CreateNew; o banco existente continua na pasta persistente do usuário.
+
+**Terminal 2: gateway público seguro.** Abra outro PowerShell:
+
+    cd C:\Projetos\rastro360\Rastro360
+    .\scripts\start-public-demo.ps1
+
+O gateway executará em http://127.0.0.1:8090 e usará o backend já aberto na porta 8081. Mantenha este terminal executando.
+
+**Terminal 3: conferir as restrições, ANTES do túnel.** Abra um terceiro PowerShell:
+
+    cd C:\Projetos\rastro360\Rastro360
+    .\scripts\check-public-demo.ps1
+
+O script exige HTTP 200 para /tracking.html e HTTP 404 para diversas rotas operacionais. Se não passar, NÃO abra o túnel.
+
+**Terminal 4: HTTPS temporário.** Se necessário, instale o cliente oficial com:
+
+    winget install -e --id Cloudflare.cloudflared
+
+Após instalar, abra um novo terminal caso o comando não seja reconhecido. Inicie o túnel:
+
+    cloudflared tunnel --url http://127.0.0.1:8090
+
+Copie o endereço HTTPS real impresso, por exemplo, https://NOME-ALEATORIO.trycloudflare.com (esse é somente um exemplo, NÃO é uma URL ativa). Mantenha o terminal aberto.
+
+Teste em navegador anônimo ou celular:
+- https://NOME-REAL.trycloudflare.com/tracking.html deve abrir sem login.
+- https://NOME-REAL.trycloudflare.com/api/products deve responder HTTP 404, sem expor cadastros.
+- A API pública /api/public/track/RT-... deve responder para um código RT de teste que já existe.
+
+**Gerar nova etiqueta com endereço HTTPS:** deixe os terminais 2 e 4 ativos, pare SOMENTE o Spring Boot no terminal 1 e reinicie-o com a URL gerada pelo túnel:
+
+    $env:APP_PUBLIC_BASE_URL = "https://NOME-REAL.trycloudflare.com"
+    $env:PORT = "8081"
+    mvn spring-boot:run
+
+Substitua NOME-REAL pelo endereço exato mostrado por cloudflared. Na área administrativa **local** (http://localhost:8081), consulte um volume de demonstração e emita **uma nova etiqueta**. A etiqueta antiga, apontando para localhost, não muda automaticamente. Leia o novo QR com um celular e confira a consulta. Teste também quando o status do volume mudar.
+
+### Limites e encerramento do teste
+
+- **URL temporária:** quando cloudflared é interrompido, o endereço deixa de funcionar. Em uma nova sessão o domínio muda, então qualquer QR impresso com o endereço anterior também para de funcionar. Nunca utilize esse QR em remessas reais.
+- **Dados públicos:** qualquer pessoa que conheça um código ou URL RT válido pode consultar os campos públicos (produto, lote, quantidade, status e eventos selecionados). Evite testes com informações sensíveis.
+- **Segurança:** o gateway possui lista restrita de rotas e não encaminha credenciais, mas isso não substitui rate limiting, auditoria de produção, autenticação corporativa ou uma infraestrutura HTTPS definitiva. Não divulgue o usuário e senha de desenvolvimento.
+- **Encerrar:** pressione Ctrl+C no terminal 4 para fechar o túnel e no terminal 2 para parar o gateway. O Spring Boot pode continuar local. Para novas etiquetas apenas locais, remova a variável APP_PUBLIC_BASE_URL no terminal 1 com Remove-Item Env:APP_PUBLIC_BASE_URL e reinicie o Spring Boot.
 
 ## Próximas funcionalidades
 
