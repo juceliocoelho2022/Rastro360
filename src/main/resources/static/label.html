@@ -36,19 +36,31 @@
                     font-weight: 700; color: #667b87; margin-bottom: 1mm; }
     .detail-value { display: block; font-size: 11px; font-weight: 700; color: #20394a;
                     line-height: 1.2; overflow-wrap: anywhere; max-height: 29px; overflow: hidden; }
-    /* The photo is optional; its box disappears entirely when absent. */
-    .product-photo { display: block; width: 75mm; max-width: 100%; height: 37mm;
-                     object-fit: contain; align-self: center; margin: 2mm auto 1mm; }
-    .product-photo[hidden] { display: none !important; }
-    .scan { margin-top: auto; display: flex; flex-direction: column; align-items: center;
-            justify-content: flex-end; min-height: 0; }
-    .scan-title { font-size: 9px; letter-spacing: .8px; color: #4b6472;
-                  text-align: center; margin-bottom: 1mm; font-weight: 700; }
-    .qr { display: block; width: 53mm; height: 53mm; max-width: 100%;
+    /* The photograph and real QR are displayed side by side on the same 100 x 150 mm label.
+       For products without photographs, the QR is centered and remains printable. */
+    .product-media { display: grid; grid-template-columns: minmax(0, 1fr);
+                     align-items: center; justify-items: center; flex: 1;
+                     min-height: 0; margin: 3mm 0 2mm; }
+    .product-media.has-photo { grid-template-columns: minmax(0, 1fr) 45mm;
+                               column-gap: 3mm; justify-items: stretch; }
+    .photo-panel { min-width: 0; height: 66mm; display: flex; flex-direction: column;
+                   justify-content: center; align-items: center; padding: 1mm; }
+    .photo-panel[hidden], .product-photo[hidden] { display: none !important; }
+    .photo-caption { font-size: 9px; letter-spacing: .65px; font-weight: 700;
+                     color: #647986; margin-bottom: 2mm; }
+    .product-photo { display: block; width: 100%; max-width: 40mm; height: 58mm;
+                     max-height: 58mm; object-fit: contain; object-position: center; }
+    .scan { width: 45mm; max-width: 100%; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; min-width: 0; }
+    .scan-title { font-size: 8px; letter-spacing: .5px; font-weight: 700; color: #4b6472;
+                  text-align: center; line-height: 1.35; margin-bottom: 3mm; }
+    .qr { display: block; width: 43mm; height: 43mm; max-width: 100%;
           object-fit: contain; image-rendering: pixelated; background: #fff; }
+    .tracking-footer { width: 100%; margin-top: auto; text-align: center;
+                       padding-top: 2mm; border-top: 1px solid #e2e9ed; }
     .code { font-family: Consolas, 'Courier New', monospace; font-size: 10px;
             font-weight: 700; text-align: center; overflow-wrap: anywhere;
-            line-height: 1.3; margin-top: 1.5mm; color: #132b3c; }
+            line-height: 1.3; color: #132b3c; }
     .instruction { font-size: 9px; color: #4b6472; text-align: center;
                    margin-top: 1.5mm; line-height: 1.25; }
     @page { size: 100mm 150mm; margin: 0; }
@@ -61,8 +73,9 @@
                border: 0 !important; border-radius: 0 !important;
                box-shadow: none !important; break-inside: avoid; page-break-inside: avoid;
                print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-      .product-photo { height: 37mm; }
-      .qr { width: 53mm; height: 53mm; }
+      .photo-panel { height: 66mm; }
+      .product-photo { max-width: 40mm; height: 58mm; }
+      .qr { width: 43mm; height: 43mm; }
     }
     @media screen and (max-width: 430px) {
       .label { width: min(100mm, 100%); }
@@ -97,11 +110,17 @@
       <div class="detail"><span class="detail-label">QTD.</span><strong class="detail-value" id="quantity">—</strong></div>
     </div>
 
-    <img class="product-photo" id="productPhoto" alt="Fotografia do produto" hidden>
-
-    <div class="scan">
-      <div class="scan-title">ESCANEIE PARA RASTREAR</div>
-      <img class="qr" id="qr" alt="QR Code do código de rastreio">
+    <div class="product-media" id="productMedia">
+      <div class="photo-panel" id="photoPanel" hidden>
+        <div class="photo-caption">FOTO DO PRODUTO</div>
+        <img class="product-photo" id="productPhoto" alt="Fotografia do produto" hidden>
+      </div>
+      <div class="scan">
+        <div class="scan-title">ESCANEIE PARA RASTREAR</div>
+        <img class="qr" id="qr" alt="QR Code do código de rastreio">
+      </div>
+    </div>
+    <div class="tracking-footer">
       <div class="code" id="code"></div>
       <div class="instruction">Consulte o histórico deste volume pelo QR Code.</div>
     </div>
@@ -144,6 +163,8 @@
           productPhoto.src = objectUrl;
           await productPhoto.decode();
           productPhoto.hidden = false;
+          document.getElementById('photoPanel').hidden = false;
+          document.getElementById('productMedia').classList.add('has-photo');
           window.addEventListener('pagehide', () => URL.revokeObjectURL(objectUrl), { once: true });
         }
       } catch (_) {

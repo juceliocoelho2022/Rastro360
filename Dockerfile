@@ -7,6 +7,6 @@ RUN mvn -q -DskipTests package
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY --from=build /app/target/rastro360-0.3.1.jar app.jar
+COPY --from=build /app/target/rastro360-0.3.2.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
