@@ -10,6 +10,9 @@ spring:
 server:
   port: ${PORT:8080}
 app:
+  qr:
+    # Configure URL HTTPS pública antes de imprimir etiquetas para uso externo.
+    public-base-url: ${APP_PUBLIC_BASE_URL:}
   security:
     username: ${APP_USERNAME:operador}
     password: ${APP_PASSWORD:dev12345}

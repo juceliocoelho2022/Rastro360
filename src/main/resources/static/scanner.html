@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Leitor QR Code | Rastro360</title>
+  <style>
+    :root{font-family:Inter,Arial,sans-serif;color:#183144;background:#f3f7fa}
+    *{box-sizing:border-box}
+    body{margin:0;padding:20px;min-height:100vh}
+    .wrap{max-width:620px;margin:auto}
+    header{display:flex;align-items:center;gap:12px;margin:8px 0 24px}
+    .logo{width:42px;height:42px;display:grid;place-items:center;background:#28c4a0;border-radius:12px;color:#123044;font-size:22px;font-weight:800}
+    h1{font-size:24px;margin:0}p{color:#607687;line-height:1.5}
+    .panel{background:#fff;border-radius:16px;border:1px solid #dae6eb;padding:21px;margin-bottom:18px}
+    .camera{position:relative;background:#0e2638;border-radius:14px;min-height:230px;display:grid;place-items:center;overflow:hidden}
+    video{width:100%;max-height:390px;object-fit:cover;display:none}
+    .camera.active video{display:block}
+    .camera.active .placeholder{display:none}
+    .placeholder{text-align:center;color:#d1e9ed;padding:30px}
+    .placeholder strong{display:block;font-size:38px;margin-bottom:9px}
+    .actions{display:flex;gap:10px;margin-top:15px;flex-wrap:wrap}
+    button,.action{border-radius:9px;padding:12px 16px;font-weight:700;font-size:13px;cursor:pointer;text-decoration:none;display:inline-block}
+    .primary{background:#0a876b;color:white;border:1px solid #0a876b}
+    .secondary{background:white;color:#18475c;border:1px solid #cbdce5}
+    button:disabled{opacity:.55;cursor:default}
+    label{font-size:12px;font-weight:700;color:#4a6475;display:block}
+    input{padding:13px;border:1px solid #c5d8e1;border-radius:8px;width:100%;font-size:15px;margin:8px 0}
+    .message{padding:12px;background:#e5f7f0;color:#0b755a;border-radius:9px;font-size:13px;margin-top:12px}
+    .message.error{background:#fff0f0;color:#a32636}
+    .hidden{display:none}
+    .result strong{display:block;font-size:18px;margin:6px 0}
+    .muted{color:#758c9c;font-size:12px}
+    footer{font-size:12px;color:#68818d;margin:25px 0}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header><span class="logo">R</span><div><h1>Rastro360 · Leitor QR</h1><p style="margin:0;font-size:12px">Conferência de volumes</p></div></header>
+    <div class="panel">
+      <h2 style="margin-top:0">Escanear etiqueta</h2>
+      <p>Use a câmera do celular para ler o QR Code impresso em uma caixa ou palete.</p>
+      <div id="camera" class="camera">
+        <video id="video" muted playsinline autoplay aria-label="Pré-visualização da câmera"></video>
+        <div class="placeholder"><strong>▦</strong>A câmera será ativada apenas quando você tocar em “Iniciar leitura”.</div>
+      </div>
+      <div class="actions">
+        <button id="start" type="button" class="primary">Iniciar leitura</button>
+        <button id="stop" type="button" class="secondary" disabled>Parar câmera</button>
+        <a href="/" class="action secondary">Voltar ao painel</a>
+      </div>
+      <div id="message" class="message hidden" role="status" aria-live="polite"></div>
+    </div>
+    <div class="panel">
+      <h2 style="margin-top:0">Inserir código manualmente</h2>
+      <p>Alternativa para aparelhos sem suporte ao leitor de QR Code.</p>
+      <form id="manual">
+        <label for="code">Código do volume (RT-...)</label>
+        <input id="code" name="code" required placeholder="RT-..." autocapitalize="characters" autocomplete="off">
+        <button type="submit" class="primary">Consultar volume</button>
+      </form>
+    </div>
+    <div class="panel result hidden" id="result" aria-live="polite">
+      <div class="muted">VOLUME IDENTIFICADO</div>
+      <strong id="productName"></strong>
+      <div id="meta" class="muted"></div>
+      <p id="status"></p>
+      <a id="openHistory" class="action primary">Abrir histórico operacional →</a>
+    </div>
+    <footer>Acesso operacional protegido. A leitura exige câmera compatível e contexto HTTPS (ou localhost). Não disponibilize credenciais operacionais a clientes.</footer>
+  </div>
+  <script>
+    'use strict';
+    const $ = id => document.getElementById(id);
+    let stream = null;
+    let running = false;
+    let frameId = null;
+    let detector = null;
+    let decoding = false;
+
+    function showMessage(message, isError = false) {
+      const element = $('message');
+      element.textContent = message;
+      element.className = 'message' + (isError ? ' error' : '');
+    }
+
+    function parseCode(raw) {
+      const trimmed = String(raw ?? '').trim();
+      let code = trimmed;
+      try {
+        const url = new URL(trimmed);
+        if (!url.pathname.endsWith('/tracking.html')) throw Error('QR Code de outro sistema.');
+        code = url.searchParams.get('code') || '';
+      } catch (error) {
+        if (/^https?:\/\//i.test(trimmed)) throw Error('O QR Code não pertence ao Rastro360.');
+      }
+      if (!/^RT-[a-fA-F0-9]{32}$/.test(code)) {
+        throw Error('Código de rastreamento inválido. Informe RT- seguido de 32 dígitos hexadecimais.');
+      }
+      return code.toUpperCase();
+    }
+
+    function stopCamera() {
+      running = false;
+      if (frameId !== null) cancelAnimationFrame(frameId);
+      frameId = null;
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      stream = null;
+      $('video').pause();
+      $('video').srcObject = null;
+      $('camera').classList.remove('active');
+      $('start').disabled = false;
+      $('stop').disabled = true;
+    }
+
+    async function lookup(raw) {
+      try {
+        const code = parseCode(raw);
+        $('code').value = code;
+        const response = await fetch('/api/units/' + encodeURIComponent(code), {credentials:'same-origin'});
+        if (!response.ok) throw Error(response.status === 404 ? 'Volume não encontrado.' : 'Não foi possível consultar o volume.');
+        const {unit} = await response.json();
+        $('productName').textContent = unit.productName;
+        $('meta').textContent = 'SKU: ' + unit.productSku + ' · Lote: ' + unit.lot + ' · Quantidade: ' + unit.quantity;
+        $('status').textContent = 'Situação atual: ' + unit.status.replaceAll('_', ' ');
+        $('openHistory').href = '/?track=' + encodeURIComponent(unit.trackingCode) + '#trace';
+        $('result').classList.remove('hidden');
+        showMessage('Volume identificado. Abra o histórico operacional para conferir as movimentações.');
+        stopCamera();
+      } catch (error) {
+        showMessage(error.message, true);
+      }
+    }
+
+    async function scanFrame() {
+      if (!running) return;
+      if (!decoding && $('video').readyState >= 2) {
+        decoding = true;
+        try {
+          const found = await detector.detect($('video'));
+          if (found.length) {
+            await lookup(found[0].rawValue);
+            if (!running) return;
+          }
+        } catch (error) {
+          showMessage('Não foi possível interpretar a imagem. Ajuste a iluminação ou use o campo manual.', true);
+          stopCamera();
+          return;
+        } finally {
+          decoding = false;
+        }
+      }
+      if (running) frameId = requestAnimationFrame(scanFrame);
+    }
+
+    $('start').addEventListener('click', async () => {
+      if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+        showMessage('A câmera exige HTTPS ou localhost. Abra por HTTPS ou use o código manual.', true);
+        return;
+      }
+      if (!('BarcodeDetector' in window)) {
+        showMessage('Seu navegador não oferece leitura nativa de QR Code. Utilize um Chrome compatível ou informe o código manualmente.', true);
+        return;
+      }
+      try {
+        const formats = await BarcodeDetector.getSupportedFormats();
+        if (!formats.includes('qr_code')) throw Error('Este navegador não suporta leitura de QR Code.');
+        detector = new BarcodeDetector({formats:['qr_code']});
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio:false, video:{facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720}}
+        });
+        $('video').srcObject = stream;
+        await $('video').play();
+        running = true;
+        $('camera').classList.add('active');
+        $('start').disabled = true;
+        $('stop').disabled = false;
+        showMessage('Câmera ativada. Posicione o QR Code da etiqueta no enquadramento.');
+        frameId = requestAnimationFrame(scanFrame);
+      } catch (error) {
+        stopCamera();
+        showMessage('Não foi possível acessar a câmera: ' + error.message, true);
+      }
+    });
+
+    $('stop').addEventListener('click', stopCamera);
+    $('manual').addEventListener('submit', async event => {
+      event.preventDefault();
+      await lookup($('code').value);
+    });
+    window.addEventListener('pagehide', stopCamera);
+  </script>
+</body>
+</html>
