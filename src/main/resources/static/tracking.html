@@ -1,8 +1,304 @@
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Consultar entrega · Rastro360</title><link rel="stylesheet" href="/assets/style.css"></head>
-<body style="min-height:100vh;padding:5vh 20px;background:#f4f7fa"><main style="max-width:650px;margin:0 auto"><header style="display:flex;align-items:center;gap:12px;margin-bottom:30px"><span class="brand-mark">R</span><div><h1 style="font-size:25px;margin:0">Rastro<span style="color:#008f6b">360</span></h1><div class="dim">Consulta de rastreamento</div></div></header><div class="panel"><div class="eyebrow">STATUS DE ENTREGA</div><div id="publicResult" class="empty">Consultando...</div></div><p class="dim" style="margin-top:18px">Esta página mostra somente dados de rastreamento. Informações internas e pessoais não são divulgadas.</p></main>
-<script>
-const safe = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmt = s => new Date(s).toLocaleString('pt-BR');
-(async()=>{const code=new URLSearchParams(location.search).get('code');const out=document.getElementById('publicResult');if(!code){out.textContent='Informe um código válido no endereço da consulta.';return}try{const res=await fetch('/api/public/track/'+encodeURIComponent(code));if(!res.ok)throw Error('Código não encontrado. Verifique o identificador informado.');const data=await res.json();out.className='';out.innerHTML='<div class="trace-summary"><div><h2>'+safe(data.productName)+'</h2><div class="dim">'+safe(data.trackingCode)+' · Lote '+safe(data.lot)+' · '+data.quantity+' unidade(s)</div></div><span class="tag '+safe(data.status)+'">'+safe(data.status).replaceAll('_',' ')+'</span></div><div class="timeline">'+data.events.map(e=>'<div class="timeline-item"><strong>'+safe(e.description)+'</strong><time>'+fmt(e.occurredAt)+'</time></div>').join('')+'</div>'}catch(e){out.textContent=e.message}})();
-</script></body></html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="theme-color" content="#102b39">
+  <title>Acompanhar entrega | Rastro360</title>
+  <style>
+    :root{font-family:Inter,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;color:#182f3d;background:#f1f5f7}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh}
+    button,input{font:inherit}button{cursor:pointer}
+    .header{background:#102b39;color:#fff;padding:18px 18px}
+    .header-inner{max-width:720px;margin:auto;display:flex;align-items:center;gap:12px}
+    .mark{background:#28c9a0;color:#0a3640;display:grid;place-items:center;width:42px;height:42px;border-radius:11px;font-size:23px;font-weight:800;flex-shrink:0}
+    .brand{font-size:21px;font-weight:800;letter-spacing:-.5px}.brand span{color:#2dd7aa}
+    .subtitle{font-size:12px;color:#bad0d8;margin-top:2px}
+    main{max-width:720px;margin:25px auto 50px;padding:0 16px}
+    .card{border:1px solid #dce6ea;border-radius:15px;background:#fff;padding:22px;margin-bottom:16px;box-shadow:0 3px 18px #1935470a}
+    h1{font-size:26px;letter-spacing:-.6px;margin:0 0 7px}
+    h2{font-size:17px;letter-spacing:-.2px;margin:0 0 18px}
+    p{line-height:1.55}.muted{color:#617a89;font-size:13px}
+    .overline{text-transform:uppercase;color:#597484;font-size:10px;font-weight:800;letter-spacing:1.6px;margin:0 0 8px}
+    .status{display:inline-flex;align-items:center;gap:6px;background:#e3f7ee;color:#096447;font-size:12px;font-weight:800;border-radius:99px;padding:7px 12px}
+    .status:before{content:"";width:7px;height:7px;border-radius:100%;background:currentColor}
+    .status.transport{background:#e3f1fd;color:#175aa7}
+    .status.waiting{background:#fff2dd;color:#885b13}
+    .status.done{background:#dcf8ed;color:#036b4e}
+    .overview-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .product-name{font-size:23px;font-weight:800;overflow-wrap:anywhere;margin-bottom:4px}
+    .meta{font-size:13px;color:#597285;overflow-wrap:anywhere;line-height:1.6}
+    .code{font:700 12px/1.6 Consolas,ui-monospace,monospace;overflow-wrap:anywhere;color:#324e60}
+    .progress{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin-top:23px}
+    .step{border-top:4px solid #dce6ea;padding:10px 2px 0;text-align:center;color:#81949e;font-size:11px;font-weight:700;line-height:1.3}
+    .step.complete{border-color:#0a9474;color:#096e57}.step.current{border-color:#2075b2;color:#125e92}
+    .event{display:grid;grid-template-columns:22px minmax(0,1fr);gap:12px;position:relative;padding:0 0 23px}
+    .event:not(:last-child):before{content:"";position:absolute;left:9px;top:18px;bottom:2px;width:2px;background:#d3e9e0}
+    .dot{height:20px;width:20px;border-radius:50%;display:grid;place-items:center;background:#dbf5eb;color:#0b8063;font-size:12px;font-weight:900}
+    .event strong{display:block;font-size:14px;margin:0 0 4px}.event time{font-size:12px;color:#688190}
+    .event:last-child{padding-bottom:0}
+    .tools{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:18px}
+    .small{color:#607988;font-size:12px}
+    .buttons{display:flex;gap:8px;flex-wrap:wrap}
+    button.primary{background:#087b63;color:#fff;border:1px solid #087b63}
+    button.secondary{background:#fff;color:#184957;border:1px solid #bbd0d9}
+    button.primary,button.secondary{border-radius:9px;padding:10px 14px;font-weight:700;font-size:12px}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .notice{border-radius:9px;padding:12px 14px;background:#eaf5f7;color:#2a667b;margin-top:14px;font-size:12px;line-height:1.5}
+    .notice.warning{background:#fff3df;color:#865b19}
+    .notice.error{background:#fff0ed;color:#a13725}
+    .lookup{display:flex;gap:8px;flex-wrap:wrap}
+    .lookup input{border:1px solid #b9cdd7;border-radius:9px;padding:12px;flex:1;min-width:180px;font:600 12px Consolas,monospace}
+    .hidden{display:none!important}
+    footer{text-align:center;font-size:12px;color:#6b8492;padding:8px 4px 24px}
+    @media(max-width:500px){
+      main{margin-top:16px;padding:0 10px}
+      .card{padding:17px;border-radius:12px}
+      h1{font-size:23px}
+      .product-name{font-size:20px}
+      .progress{gap:2px}
+      .step{font-size:9px}
+      .lookup input{min-width:0;width:100%;flex-basis:100%}
+      .lookup button{width:100%}
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner"><div class="mark">R</div>
+      <div><div class="brand">Rastro<span>360</span></div>
+        <div class="subtitle">Acompanhamento de entrega</div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <p class="overline">Consulta de volume</p>
+      <h1>Acompanhe seu produto</h1>
+      <p class="muted" style="margin:0 0 18px">Escaneie a etiqueta ou informe o código RT- para consultar as etapas registradas.</p>
+      <form id="lookupForm" class="lookup">
+        <input id="codeInput" aria-label="Código de rastreamento" required
+               placeholder="RT-..." autocapitalize="characters" autocomplete="off"
+               spellcheck="false" maxlength="35">
+        <button class="primary" type="submit">Consultar</button>
+      </form>
+      <div id="statusMessage" class="notice hidden" role="status" aria-live="polite"></div>
+      <div id="localNotice" class="notice warning hidden">Você está usando um endereço local (localhost). Para abrir este mesmo QR Code em outro celular, será necessário configurar um endereço público HTTPS e gerar novamente a etiqueta.</div>
+    </section>
+
+    <div id="results" class="hidden">
+      <section class="card" aria-label="Situação da entrega">
+        <p class="overline">Situação atual</p>
+        <div class="overview-head">
+          <div>
+            <div id="productName" class="product-name"></div>
+            <div class="meta"><span id="lot"></span> · <span id="quantity"></span></div>
+          </div>
+          <span id="statusBadge" class="status waiting"></span>
+        </div>
+        <p id="trackingCode" class="code"></p>
+        <div class="progress" id="progress" aria-label="Etapas de acompanhamento"></div>
+        <div class="tools">
+          <div id="lastUpdated" class="small" role="status" aria-live="polite"></div>
+          <div class="buttons">
+            <button id="refreshButton" class="secondary" type="button">Atualizar agora</button>
+            <button id="shareButton" class="primary" type="button">Compartilhar</button>
+          </div>
+        </div>
+        <div class="notice">A consulta é atualizada automaticamente a cada 30 segundos enquanto esta página está aberta. O status depende dos registros realizados pela operação; não representa localização GPS em tempo real.</div>
+      </section>
+
+      <section class="card">
+        <h2>Histórico da entrega</h2>
+        <div id="timeline"></div>
+      </section>
+    </div>
+    <footer>Rastro360 · Consulta pública limitada a informações de rastreamento. Dados internos e pessoais não são exibidos.</footer>
+  </main>
+
+  <script>
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const formatDate = timestamp => {
+      const parsed = new Date(timestamp);
+      return Number.isNaN(parsed.getTime()) ? 'Data indisponível'
+        : parsed.toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'});
+    };
+    const statusLabels = {
+      PRODUZIDO: 'Produção registrada',
+      ARMAZENADO: 'Em preparação',
+      CARREGADO: 'Preparado para envio',
+      EM_TRANSITO: 'A caminho',
+      NO_CLIENTE: 'Chegou ao destino',
+      ENTREGUE: 'Entregue'
+    };
+    const phases = [
+      {label:'Produção',statuses:['PRODUZIDO']},
+      {label:'Preparação',statuses:['ARMAZENADO','CARREGADO']},
+      {label:'Transporte',statuses:['EM_TRANSITO']},
+      {label:'Chegada',statuses:['NO_CLIENTE']},
+      {label:'Entrega',statuses:['ENTREGUE']}
+    ];
+    let currentCode = null;
+    let lastData = null;
+    let inFlight = false;
+    const pattern = /^RT-[0-9A-F]{32}$/i;
+
+    function message(text, level) {
+      $('statusMessage').textContent = text;
+      $('statusMessage').className = 'notice' + (level ? ' ' + level : '');
+    }
+    function clearMessage() {
+      $('statusMessage').className = 'notice hidden';
+      $('statusMessage').textContent = '';
+    }
+    function render(data) {
+      lastData = data;
+      $('results').classList.remove('hidden');
+      $('productName').textContent = data.productName;
+      $('lot').textContent = 'Lote ' + data.lot;
+      $('quantity').textContent = data.quantity + ' unidade(s)';
+      $('trackingCode').textContent = data.trackingCode;
+      const badge = $('statusBadge');
+      badge.textContent = statusLabels[data.status] || 'Em acompanhamento';
+      badge.className = 'status ' + (data.status === 'ENTREGUE' ? 'done'
+        : data.status === 'EM_TRANSITO' ? 'transport'
+        : data.status === 'NO_CLIENTE' ? 'transport' : 'waiting');
+
+      const currentIndex = phases.findIndex(phase => phase.statuses.includes(data.status));
+      $('progress').replaceChildren(...phases.map((phase, index) => {
+        const element = document.createElement('div');
+        element.className = 'step' + (currentIndex >= 0 && index < currentIndex
+          ? ' complete' : index === currentIndex ? ' current' : '');
+        element.textContent = phase.label;
+        return element;
+      }));
+      const events = $('timeline');
+      events.replaceChildren();
+      for (const event of data.events || []) {
+        const row = document.createElement('div');
+        row.className = 'event';
+        const marker = document.createElement('div');
+        marker.className = 'dot';
+        marker.textContent = '✓';
+        const content = document.createElement('div');
+        const description = document.createElement('strong');
+        description.textContent = event.description;
+        const time = document.createElement('time');
+        time.dateTime = event.occurredAt;
+        time.textContent = formatDate(event.occurredAt);
+        content.append(description, time);
+        row.append(marker, content);
+        events.append(row);
+      }
+      if (!events.childElementCount) {
+        events.textContent = 'Ainda não existem etapas públicas registradas.';
+      }
+      $('lastUpdated').textContent = 'Consultado em ' + new Date().toLocaleTimeString('pt-BR');
+    }
+
+    async function load(code, foreground = false) {
+      if (inFlight) return;
+      inFlight = true;
+      $('refreshButton').disabled = true;
+      if (foreground) message('Consultando o volume...');
+      try {
+        const response = await fetch('/api/public/track/' + encodeURIComponent(code), {
+          credentials: 'omit', cache: 'no-store', headers: {Accept:'application/json'}
+        });
+        if (response.status === 404) throw Error('Código não encontrado. Confira os caracteres do identificador.');
+        if (!response.ok) throw Error('Serviço temporariamente indisponível. Tente novamente.');
+        const data = await response.json();
+        if (code !== currentCode) return;
+        render(data);
+        clearMessage();
+      } catch (error) {
+        if (code !== currentCode) return;
+        if (lastData && lastData.trackingCode === code) {
+          message('Não foi possível atualizar. Os dados exibidos são da última consulta; tente novamente.', 'warning');
+        } else {
+          $('results').classList.add('hidden');
+          message(error.message || 'Falha ao consultar o rastreamento.', 'error');
+        }
+      } finally {
+        inFlight = false;
+        $('refreshButton').disabled = false;
+        // If the user searched another code during the request, fetch that one now.
+        if (currentCode && code !== currentCode) load(currentCode, true);
+      }
+    }
+
+    function search(input) {
+      const code = String(input || '').trim().toUpperCase();
+      if (!pattern.test(code)) {
+        currentCode = null;
+        lastData = null;
+        $('results').classList.add('hidden');
+        message('Código inválido. Informe RT- seguido de 32 caracteres hexadecimais.', 'error');
+        return;
+      }
+      currentCode = code;
+      $('codeInput').value = code;
+      lastData = null;
+      $('results').classList.add('hidden');
+      const url = new URL(window.location.href);
+      url.searchParams.set('code', code);
+      window.history.replaceState(null, '', url.pathname + url.search);
+      load(code, true);
+    }
+
+    $('lookupForm').addEventListener('submit', event => {
+      event.preventDefault();
+      search($('codeInput').value);
+    });
+    $('refreshButton').addEventListener('click', () => {
+      if (currentCode) load(currentCode, true);
+    });
+    $('shareButton').addEventListener('click', async () => {
+      if (!currentCode) return;
+      if (['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)) {
+        message('Este link é local e não abre em outro celular. Configure o endereço HTTPS público antes de compartilhar.', 'warning');
+        return;
+      }
+      const link = new URL(window.location.pathname, window.location.origin);
+      link.searchParams.set('code', currentCode);
+      try {
+        if (navigator.share) {
+          await navigator.share({title:'Rastro360 · Acompanhar entrega', url:link.href});
+        } else if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(link.href);
+          message('Link de rastreamento copiado.');
+        } else {
+          message('Copie o endereço da página para compartilhar.');
+        }
+      } catch (error) {
+        if (error.name !== 'AbortError') message('Não foi possível compartilhar o link.', 'warning');
+      }
+    });
+    // Polling (not GPS, push notifications or websocket): pause in background and after delivery.
+    setInterval(() => {
+      if (document.visibilityState === 'visible' && navigator.onLine !== false
+          && currentCode && lastData?.status !== 'ENTREGUE') {
+        load(currentCode);
+      }
+    }, 30000);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && currentCode
+          && navigator.onLine !== false && lastData?.status !== 'ENTREGUE') {
+        load(currentCode);
+      }
+    });
+    window.addEventListener('online', () => {
+      if (currentCode && lastData?.status !== 'ENTREGUE') load(currentCode);
+    });
+    if (['localhost','127.0.0.1','::1'].includes(window.location.hostname)) {
+      $('localNotice').classList.remove('hidden');
+    }
+    const initial = new URLSearchParams(window.location.search).get('code');
+    if (initial) search(initial);
+  </script>
+</body>
+</html>
