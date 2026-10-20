@@ -86,6 +86,22 @@ class QrCodeIntegrationTest {
     }
 
     @Test
+    void printableLabelUsesThermalPaperAndKeepsPhotoOptional() throws Exception {
+        String html = mvc.perform(get("/label.html?code=" + trackingCode)
+                        .with(httpBasic("operador", "dev12345")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html).contains("@page { size: 100mm 150mm; margin: 0; }");
+        assertThat(html).contains("height: 150mm");
+        assertThat(html).contains("class=\"product-photo\" id=\"productPhoto\"");
+        assertThat(html).contains("class=\"qr\" id=\"qr\"");
+        assertThat(html).contains("photoResponse.ok");
+        assertThat(html).contains("printButton.disabled = false");
+        assertThat(html).contains("encodeURIComponent(data.trackingCode) + '/qr.png'");
+    }
+
+    @Test
     void publicTrackingRemainsAccessibleWithoutAuthentication() throws Exception {
         mvc.perform(get("/tracking.html?code=" + trackingCode)).andExpect(status().isOk());
         mvc.perform(get("/api/public/track/" + trackingCode))
