@@ -27,7 +27,7 @@ $denied = @("/index.html", "/api/products", "/api/units", "/api/shipments", "/la
 foreach ($path in $denied) {
     $status = HttpStatus "$base$path"
     if ($status -ne 404) {
-        throw "BLOQUEIO FALHOU em $path: HTTP $status. NAO INICIE O TUNEL."
+        throw "BLOQUEIO FALHOU em ${path}: HTTP $status. NAO INICIE O TUNEL."
     }
     Write-Host "Bloqueado (404): $path" -ForegroundColor Green
 }
