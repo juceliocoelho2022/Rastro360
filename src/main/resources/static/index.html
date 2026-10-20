@@ -23,7 +23,7 @@
       <div class="sidebar-note"><strong>Fluxo rastreável</strong><p>Produção → Estoque → Doca → Caminhão → Cliente</p></div>
     </aside>
     <main class="main">
-      <div class="topbar"><span class="topbar-label">PAINEL OPERACIONAL <span class="divider-dot">•</span> MVP 0.2.1</span><span class="online"><i></i> Sistema local</span></div>
+      <div class="topbar"><span class="topbar-label">PAINEL OPERACIONAL <span class="divider-dot">•</span> MVP 0.3.0</span><span class="online"><i></i> Sistema local</span></div>
       <section id="tab-overview" class="tab active">
         <div class="page-header"><div><div class="eyebrow">INTELIGÊNCIA OPERACIONAL</div><h1>Visão geral da operação</h1><p>Acompanhe os volumes desde a fabricação até a confirmação de entrega.</p></div><button class="btn secondary" id="refreshBtn">↻ Atualizar</button></div>
         <div class="stats" id="stats"></div>
@@ -38,7 +38,16 @@
           <div class="panel"><h2>Registrar volume produzido</h2><p class="subtle">Um volume pode representar uma caixa ou um palete indivisível.</p>
             <form id="produceForm" class="form"><label>Produto<select required name="productId" id="productSelect"></select></label><label>Lote de fabricação<input required maxlength="80" name="lot" placeholder="Ex.: LOTE-2026-010" /></label><label>Quantidade neste volume<input required type="number" min="1" name="quantity" value="1" /></label><label>Linha de produção<select required name="locationId" id="productionLocationSelect"></select></label><button class="btn" type="submit">+ Gerar código de rastreio</button></form>
           </div>
-          <div class="stack"><div class="panel"><h2>Cadastrar produto</h2><form class="form" id="productForm"><label>SKU<input required name="sku" maxlength="60" placeholder="SKU-001" /></label><label>Nome<input required name="name" maxlength="180" placeholder="Caixa de produto acabado" /></label><label>Unidade de medida<input required name="unit" maxlength="20" value="un" /></label><button class="btn secondary" type="submit">Salvar produto</button></form></div>
+          <div class="stack"><div class="panel"><h2>Cadastrar produto</h2><form class="form" id="productForm"><label>SKU<input required name="sku" maxlength="60" placeholder="SKU-001" /></label><label>Nome<input required name="name" maxlength="180" placeholder="Caixa de produto acabado" /></label><label>Unidade de medida<input required name="unit" maxlength="20" value="un" /></label><label>Foto do produto (opcional · JPG ou PNG, até 5 MB)<input id="newProductPhoto" type="file" name="photo" accept="image/png,image/jpeg" /></label><img id="newProductPreview" class="product-photo-preview" alt="Pré-visualização da foto do novo produto" hidden /><button class="btn secondary" type="submit">Salvar produto</button></form></div>
+          <div class="panel"><h2>Foto de um produto já cadastrado</h2><p class="subtle">Inclua ou substitua a foto. Ela aparecerá no histórico e na etiqueta QR.</p>
+            <form id="imageUploadForm" class="form">
+              <label>Produto<select id="imageProductSelect" name="productId" required></select></label>
+              <img id="existingProductPhoto" class="product-photo-preview" alt="Foto atual do produto" hidden />
+              <label>Selecionar nova foto (JPG ou PNG · até 5 MB)<input id="imageFile" name="file" type="file" accept="image/png,image/jpeg" required /></label>
+              <img id="imageUploadPreview" class="product-photo-preview" alt="Pré-visualização da nova foto" hidden />
+              <button class="btn secondary" type="submit">Salvar foto do produto</button>
+            </form>
+          </div>
           <div class="panel"><h2>Cadastrar localização</h2><form id="locationForm" class="form"><label>Código do local<input required name="code" maxlength="40" placeholder="EST-02" /></label><label>Descrição<input required name="name" maxlength="160" placeholder="Estoque secundário" /></label><label>Tipo<select name="kind"><option value="PRODUCAO">Produção</option><option value="ESTOQUE" selected>Estoque</option><option value="EXPEDICAO">Expedição</option></select></label><button class="btn secondary" type="submit">Salvar local</button></form></div></div>
         </div>
       </section>

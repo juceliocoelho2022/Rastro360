@@ -24,6 +24,45 @@ async function api(path, options = {}) {
   return response.json();
 }
 
+// Multipart upload stays separate from JSON API: the browser sets the boundary.
+async function uploadProductPhoto(productId, file) {
+  const body = new FormData();
+  body.append('file', file);
+  const response = await fetch('/api/products/' + encodeURIComponent(productId) + '/image', {
+    method: 'POST', credentials: 'same-origin', body
+  });
+  if (!response.ok) {
+    let error = {};
+    try { error = await response.json(); } catch (_) { /* e.g. rejected oversized upload */ }
+    throw new Error(error.detail || ('Falha ao enviar foto (HTTP ' + response.status + ').'));
+  }
+  return response.json();
+}
+
+const photoPreviewUrls = new Map();
+function previewFile(inputId, previewId) {
+  const preview = $(previewId);
+  const previous = photoPreviewUrls.get(previewId);
+  if (previous) URL.revokeObjectURL(previous);
+  const file = $(inputId).files[0];
+  if (!file) { preview.hidden = true; preview.removeAttribute('src'); return; }
+  const src = URL.createObjectURL(file);
+  photoPreviewUrls.set(previewId, src);
+  preview.src = src;
+  preview.hidden = false;
+}
+function showExistingPhoto() {
+  const productId = $('imageProductSelect').value;
+  const image = $('existingProductPhoto');
+  if (!productId) { image.hidden = true; image.removeAttribute('src'); return; }
+  image.onload = () => { image.hidden = false; };
+  image.onerror = () => { image.hidden = true; };
+  image.src = '/api/products/' + encodeURIComponent(productId) + '/image?v=' + Date.now();
+}
+window.addEventListener('pagehide', () => {
+  for (const url of photoPreviewUrls.values()) URL.revokeObjectURL(url);
+});
+
 let toastTimer;
 function toast(message, error = false) {
   const el = $('toast');
@@ -81,6 +120,7 @@ function renderUnits() {
 
 function renderSelects() {
   optionize('productSelect', state.products, p => `${p.sku} · ${p.name}`);
+  optionize('imageProductSelect', state.products, p => `${p.sku} · ${p.name}`);
   optionize('productionLocationSelect', state.locations.filter(l => l.kind === 'PRODUCAO'), l => `${l.code} · ${l.name}`);
   optionize('moveUnitSelect', state.units.filter(u => ['PRODUZIDO', 'ARMAZENADO'].includes(u.status)), u => `${u.trackingCode} · ${u.productName}`);
   optionize('destinationSelect', state.locations.filter(l => l.kind !== 'PRODUCAO'), l => `${l.code} · ${l.name}`);
@@ -116,7 +156,7 @@ function showTracking(detail) {
   const location = u.locationName ? `Local atual: ${u.locationName}` : u.shipmentReference ? `Remessa: ${u.shipmentReference}` : '';
   $('trackingInput').value = u.trackingCode;
   $('traceResult').innerHTML = `
-    <div class="trace-summary"><div><div class="eyebrow">IDENTIFICADOR ÚNICO</div><h2>${safe(u.productName)} — ${safe(u.productSku)}</h2>
+    <div class="trace-summary"><img class="trace-product-photo" alt="Foto do produto" src="/api/products/${encodeURIComponent(u.productId)}/image" onerror="this.remove()" /><div><div class="eyebrow">IDENTIFICADOR ÚNICO</div><h2>${safe(u.productName)} — ${safe(u.productSku)}</h2>
     <div class="mono">${safe(u.trackingCode)}</div><p class="subtle" style="margin:8px 0 0">Lote ${safe(u.lot)} · Quantidade ${u.quantity} · ${safe(location)}</p></div>${tag(u.status)}</div>
     <div style="padding-top:17px;display:flex;gap:9px;flex-wrap:wrap">
       <button id="copyLink" class="smallbtn">Copiar link de rastreio do cliente</button>
@@ -153,9 +193,61 @@ async function afterSubmit(form, action, success) {
 }
 
 function setupForms() {
+  $('newProductPhoto').addEventListener('change', () => previewFile('newProductPhoto', 'newProductPreview'));
+  $('imageFile').addEventListener('change', () => previewFile('imageFile', 'imageUploadPreview'));
+  $('imageProductSelect').addEventListener('change', showExistingPhoto);
+
   $('productForm').addEventListener('submit', async e => {
     e.preventDefault();
-    await afterSubmit(e.currentTarget, data => api('/products', { method: 'POST', body: JSON.stringify(data) }), 'Produto cadastrado.');
+    const form = e.currentTarget;
+    const button = form.querySelector('[type="submit"]');
+    button.disabled = true;
+    try {
+      const {sku, name, unit} = formData(form);
+      const file = $('newProductPhoto').files[0];
+      const product = await api('/products', {
+        method: 'POST', body: JSON.stringify({sku, name, unit})
+      });
+      // Cadastro permanece válido mesmo que o upload da foto falhe.
+      if (file) {
+        try {
+          await uploadProductPhoto(product.id, file);
+          toast('Produto e foto cadastrados com sucesso.');
+        } catch (error) {
+          toast('Produto salvo, mas a foto não foi enviada: ' + error.message, true);
+        }
+      } else {
+        toast('Produto cadastrado.');
+      }
+      form.reset();
+      previewFile('newProductPhoto', 'newProductPreview');
+      await refresh();
+    } catch (error) {
+      toast(error.message, true);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  $('imageUploadForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const button = form.querySelector('[type="submit"]');
+    button.disabled = true;
+    try {
+      const productId = $('imageProductSelect').value;
+      const file = $('imageFile').files[0];
+      if (!file) throw new Error('Escolha uma foto JPG ou PNG.');
+      await uploadProductPhoto(productId, file);
+      $('imageFile').value = '';
+      previewFile('imageFile', 'imageUploadPreview');
+      showExistingPhoto();
+      toast('Foto do produto atualizada com sucesso.');
+    } catch (error) {
+      toast(error.message, true);
+    } finally {
+      button.disabled = false;
+    }
   });
   $('locationForm').addEventListener('submit', async e => {
     e.preventDefault();
