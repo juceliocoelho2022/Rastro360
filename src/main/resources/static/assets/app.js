@@ -121,6 +121,8 @@ function showTracking(detail) {
     <div style="padding-top:17px;display:flex;gap:9px;flex-wrap:wrap">
       <button id="copyLink" class="smallbtn">Copiar link de rastreio do cliente</button>
       <a class="smallbtn" href="${safe(publicUrl)}" target="_blank" rel="noopener">Abrir visão do cliente ↗</a>
+      <a class="smallbtn" href="/label.html?code=${encodeURIComponent(u.trackingCode)}" target="_blank" rel="noopener">▦ Imprimir etiqueta QR</a>
+      <a class="smallbtn" href="/scanner.html" target="_blank" rel="noopener">⌕ Ler QR pela câmera</a>
     </div><div class="section-head"><h2>Linha do tempo de eventos</h2><span>${detail.events.length} registro(s)</span></div>
     <div class="timeline">${detail.events.map(ev => `
       <div class="timeline-item"><strong>${safe(human(ev.type))}</strong><time>${formatted(ev.occurredAt)} · ${safe(ev.actor)}</time>
@@ -226,4 +228,13 @@ function setupNavigation() {
 
 setupNavigation();
 setupForms();
-refresh().catch(error => toast('Falha ao carregar dados: ' + error.message, true));
+refresh().then(async () => {
+  const initialCode = new URLSearchParams(window.location.search).get('track');
+  if (initialCode) {
+    try {
+      showTracking(await api('/units/' + encodeURIComponent(initialCode)));
+    } catch (error) {
+      toast('Falha ao abrir código do QR: ' + error.message, true);
+    }
+  }
+}).catch(error => toast('Falha ao carregar dados: ' + error.message, true));
