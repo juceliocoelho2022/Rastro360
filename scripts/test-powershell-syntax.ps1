@@ -21,7 +21,7 @@ foreach ($file in $files) {
         $file.FullName, [ref]$tokens, [ref]$parseErrors
     )
 
-    if (@($parseErrors).Count -gt 0) {
+    if ($null -ne $parseErrors -and $parseErrors.Count -gt 0) {
         $failed = $true
         foreach ($parseError in $parseErrors) {
             Write-Host ("ERRO {0}:{1} - {2}" -f
