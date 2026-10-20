@@ -95,6 +95,11 @@ class QrCodeIntegrationTest {
         assertThat(html).contains("@page { size: 100mm 150mm; margin: 0; }");
         assertThat(html).contains("height: 150mm");
         assertThat(html).contains("class=\"product-photo\" id=\"productPhoto\"");
+        assertThat(html).contains("class=\"product-media\" id=\"productMedia\"");
+        assertThat(html).contains("class=\"photo-panel\" id=\"photoPanel\" hidden");
+        assertThat(html).contains(".product-media.has-photo { grid-template-columns:");
+        assertThat(html).contains("photoPanel').hidden = false");
+        assertThat(html).contains("class=\"tracking-footer\"");
         assertThat(html).contains("class=\"qr\" id=\"qr\"");
         assertThat(html).contains("photoResponse.ok");
         assertThat(html).contains("printButton.disabled = false");
