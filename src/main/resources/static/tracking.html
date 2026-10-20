@@ -166,7 +166,7 @@
       badge.textContent = statusLabels[data.status] || 'Em acompanhamento';
       badge.className = 'status ' + (data.status === 'ENTREGUE' ? 'done'
         : data.status === 'EM_TRANSITO' ? 'transport'
-        : data.status === 'NO_CLIENTE' ? 'done' : 'waiting');
+        : data.status === 'NO_CLIENTE' ? 'transport' : 'waiting');
 
       const currentIndex = phases.findIndex(phase => phase.statuses.includes(data.status));
       $('progress').replaceChildren(...phases.map((phase, index) => {
@@ -226,6 +226,8 @@
       } finally {
         inFlight = false;
         $('refreshButton').disabled = false;
+        // If the user searched another code during the request, fetch that one now.
+        if (currentCode && code !== currentCode) load(currentCode, true);
       }
     }
 
@@ -257,6 +259,10 @@
     });
     $('shareButton').addEventListener('click', async () => {
       if (!currentCode) return;
+      if (['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)) {
+        message('Este link é local e não abre em outro celular. Configure o endereço HTTPS público antes de compartilhar.', 'warning');
+        return;
+      }
       const link = new URL(window.location.pathname, window.location.origin);
       link.searchParams.set('code', currentCode);
       try {
