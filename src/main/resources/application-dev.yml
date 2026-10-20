@@ -2,7 +2,7 @@ server:
   address: 127.0.0.1
 spring:
   datasource:
-    url: jdbc:h2:file:./data/rastro360;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_ON_EXIT=FALSE
+    url: jdbc:h2:file:${RASTRO360_DB_PATH:${user.home}/.rastro360/data/rastro360};IFEXISTS=TRUE;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_ON_EXIT=FALSE
     username: sa
     password: ""
     driver-class-name: org.h2.Driver
