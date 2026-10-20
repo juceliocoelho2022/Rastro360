@@ -18,12 +18,29 @@ Sistema para acompanhar o ciclo de vida de produtos e volumes, da fabricação �
 
 Requisitos: JDK 21 e Maven 3.9+.
 
-```bash
-mvn clean test
+O perfil `dev` agora utiliza um banco H2 em uma **pasta fixa fora do Git**, que **nunca é criado automaticamente ao iniciar**. Primeiro, escolha como inicializá-lo (com o servidor parado):
+
+```powershell
+# Na pasta do projeto. Cria um banco novo vazio APENAS por escolha explícita.
+.\\scripts\\initialize-dev-db.ps1 -CreateNew
+
+# Se houver um banco legado COM DADOS, use esta alternativa em vez de -CreateNew:
+# .\\scripts\\initialize-dev-db.ps1 -SourceFile "C:\\caminho\\antigo\\rastro360.mv.db"
+
+mvn clean verify
+$env:PORT = "8081"
 mvn spring-boot:run
 ```
 
-Abra http://localhost:8080 — credenciais **apenas para desenvolvimento local**: `operador` / `dev12345`. O perfil de desenvolvimento usa H2.
+Abra http://localhost:8081 — credenciais **apenas para desenvolvimento local**: `operador` / `dev12345`.
+
+O arquivo fica em `$HOME\\.rastro360\\data\\rastro360.mv.db` (Windows: `C:\\Users\\SEU_USUARIO\\.rastro360\\data\\rastro360.mv.db`). Pode configurar outro local fixo com `$env:RASTRO360_DB_PATH = "D:/dados/rastro360"` (SEM extensão `.mv.db`) antes de **inicializar e executar** a aplicação. A ausência do arquivo impede o Spring Boot de iniciar, em vez de abrir um banco vazio silenciosamente.
+
+A cada inicialização bem-sucedida no perfil `dev`, o sistema cria um **backup H2 consistente** em `$HOME\\.rastro360\\backups`. É um backup de inicialização; ele NÃO substitui um plano periódico de backup, retenção e teste de restauração.
+
+**Antes de migrar:** não remova os arquivos antigos. Examine a contagem real de dados em cada um; copiar um banco vazio não restaura registros antigos. Interrompa o Spring Boot antes de copiar um `.mv.db`. Se o banco de destino já existir, o script se recusa a sobrescrevê-lo.
+
+Os testes automatizados usam H2 **em memória** separado; não modificam o banco local persistente.
 
 ## Rodar com PostgreSQL e Docker
 
@@ -37,9 +54,9 @@ O Docker Compose expõe o serviço somente em `127.0.0.1:8080`.
 
 ## Segurança e status
 
-**MVP 0.2.0 para desenvolvimento local.** Não publicar diretamente na internet com as credenciais de demonstração. Autenticação corporativa individual, RBAC, HTTPS, proteção CSRF, testes de carga e políticas de auditoria/privacidade precisam ser implementados antes de uso produtivo.
+**MVP 0.2.1 para desenvolvimento local.** Não publicar diretamente na internet com as credenciais de demonstração. Autenticação corporativa individual, RBAC, HTTPS, proteção CSRF, testes de carga e políticas de auditoria/privacidade precisam ser implementados antes de uso produtivo.
 
-> Os testes foram incluídos no projeto, mas ainda precisam ser executados com Maven. Não há confirmação de build aprovado neste ambiente.
+> O pipeline CI executa Maven/Java 21 em cada PR e push para main; consulte o GitHub Actions para o resultado da revisão atual.
 
 ## QR Code e etiquetas (v0.2.0)
 
