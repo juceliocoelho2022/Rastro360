@@ -7,7 +7,7 @@
 .EXAMPLE
   .\scripts\initialize-dev-db.ps1 -SourceFile "C:\Projetos\rastro360\Rastro360\data\rastro360.mv.db"
 #>
-[CmdletBinding(DefaultParameterSetName = "Help")]
+[CmdletBinding()]
 param(
     [Parameter(Mandatory = $true, ParameterSetName = "New")]
     [switch]$CreateNew,
@@ -17,6 +17,10 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+if (-not $CreateNew.IsPresent -and [string]::IsNullOrWhiteSpace($SourceFile)) {
+    throw "Informe explicitamente -CreateNew OU -SourceFile <arquivo.mv.db>."
+}
 
 $databaseBase = if ($env:RASTRO360_DB_PATH) {
     $env:RASTRO360_DB_PATH
