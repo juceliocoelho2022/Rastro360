@@ -66,19 +66,20 @@
       // A foto é opcional e protegida pelo mesmo login da etiqueta.
       // Se ausente, a impressão funciona normalmente.
       const productPhoto = document.getElementById('productPhoto');
-      const responseImage = await fetch('/api/products/' +
-        encodeURIComponent(data.productId) + '/image', {credentials:'same-origin'});
-      if (responseImage.ok) {
-        const blob = await responseImage.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        productPhoto.src = objectUrl;
-        try {
+      try {
+        const responseImage = await fetch('/api/products/' +
+          encodeURIComponent(data.productId) + '/image', {credentials:'same-origin'});
+        if (responseImage.ok) {
+          const blob = await responseImage.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          productPhoto.src = objectUrl;
           await productPhoto.decode();
           productPhoto.hidden = false;
-        } catch (_) {
-          productPhoto.hidden = true;
+          window.addEventListener('pagehide', () => URL.revokeObjectURL(objectUrl), {once:true});
         }
-        window.addEventListener('pagehide', () => URL.revokeObjectURL(objectUrl), {once:true});
+      } catch (_) {
+        // A foto é opcional: erro ao carregá-la não pode bloquear o QR Code.
+        productPhoto.hidden = true;
       }
       const qr = document.getElementById('qr');
       qr.onload = () => { printButton.disabled = false; };
