@@ -54,7 +54,7 @@ O Docker Compose expõe o serviço somente em `127.0.0.1:8080`.
 
 ## Segurança e status
 
-**MVP 0.2.1 para desenvolvimento local.** Não publicar diretamente na internet com as credenciais de demonstração. Autenticação corporativa individual, RBAC, HTTPS, proteção CSRF, testes de carga e políticas de auditoria/privacidade precisam ser implementados antes de uso produtivo.
+**MVP 0.3.0 para desenvolvimento local.** Não publicar diretamente na internet com as credenciais de demonstração. Autenticação corporativa individual, RBAC, HTTPS, proteção CSRF, testes de carga e políticas de auditoria/privacidade precisam ser implementados antes de uso produtivo.
 
 > O pipeline CI executa Maven/Java 21 em cada PR e push para main; consulte o GitHub Actions para o resultado da revisão atual.
 
@@ -101,6 +101,35 @@ Além de `TrackingFlowTest`, `QrCodeIntegrationTest` valida:
 ### Limitações desta etapa
 
 A leitura no celular é **consultiva**: não registra carregamento, movimentação nem comprovante de entrega automaticamente. Ainda não há RBAC corporativo, gestão de identidades, comunicação HTTPS embutida ou suporte a câmera em todos os navegadores. Para implantação produtiva, esses pontos e a proteção de credenciais precisam ser tratados antes de abrir a aplicação na internet.
+
+## Fotografia de produto (v0.3.0)
+
+O Rastro360 permite **uma foto por produto**, com inclusão já no cadastro ou atualização posterior em **Produção e cadastro → Foto de um produto já cadastrado**. A foto também aparece no **Histórico do produto** e na **etiqueta impressa com QR Code** (formato 100 × 150 mm). Produtos sem foto continuam funcionando normalmente.
+
+- Aceita somente **JPG/JPEG e PNG** de até **5 MB**; a imagem deve ser válida e possuir no máximo 24 megapixels.
+- O servidor redimensiona para até 1000 px na maior dimensão, converte a PNG e remove metadados de origem (como EXIF). Não confia no nome do arquivo enviado.
+- A imagem é armazenada como `BYTEA` na tabela `product_image` do **mesmo banco de dados que o produto**, e não em pastas relativas ao repositório. Dessa forma ela acompanha o **backup H2** e futuras operações de migração com os dados do produto.
+- A evolução é aplicada pelo **Flyway V2__product_image.sql** (cria apenas a nova tabela): **não apaga nem recadastra produtos, lotes, códigos RT-, volumes ou eventos anteriores.**
+- O upload e a visualização exigem autenticação operacional; o cliente que recebe o QR continua acessando apenas os dados reduzidos da página pública, **sem receber a fotografia**.
+
+### Endpoints autenticados
+
+```http
+POST /api/products/{productId}/image
+Content-Type: multipart/form-data
+Campo: file (imagem JPG/PNG)
+
+GET /api/products/{productId}/image
+Resposta: image/png
+```
+
+As duas operações funcionam para qualquer produto previamente cadastrado; um novo upload substitui a foto anterior sem afetar o volume rastreado.
+
+### Backup e verificação após atualizar
+
+A foto está integrada ao banco. Como o backup automático atual é gerado **a cada inicialização**, depois de cadastrar imagens é recomendável reiniciar o servidor para gerar uma nova cópia que também as contenha. Para operações críticas, mantenha backups periódicos externos e valide a restauração.
+
+Após `git pull --ff-only origin main`, execute `mvn clean verify` e reinicie o servidor com `mvn spring-boot:run`, **sem recriar o H2**. O Flyway aplica a nova migração sobre o mesmo banco. Verifique a foto da etiqueta e faça um ciclo de reinicialização para testar persistência.
 
 ## Próximas funcionalidades
 
