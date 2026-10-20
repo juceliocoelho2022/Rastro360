@@ -54,7 +54,7 @@ O Docker Compose expõe o serviço somente em `127.0.0.1:8080`.
 
 ## Segurança e status
 
-**MVP 0.3.0 para desenvolvimento local.** Não publicar diretamente na internet com as credenciais de demonstração. Autenticação corporativa individual, RBAC, HTTPS, proteção CSRF, testes de carga e políticas de auditoria/privacidade precisam ser implementados antes de uso produtivo.
+**MVP 0.3.1 para desenvolvimento local.** Não publicar diretamente na internet com as credenciais de demonstração. Autenticação corporativa individual, RBAC, HTTPS, proteção CSRF, testes de carga e políticas de auditoria/privacidade precisam ser implementados antes de uso produtivo.
 
 > O pipeline CI executa Maven/Java 21 em cada PR e push para main; consulte o GitHub Actions para o resultado da revisão atual.
 
@@ -130,6 +130,19 @@ As duas operações funcionam para qualquer produto previamente cadastrado; um n
 A foto está integrada ao banco. Como o backup automático atual é gerado **a cada inicialização**, depois de cadastrar imagens é recomendável reiniciar o servidor para gerar uma nova cópia que também as contenha. Para operações críticas, mantenha backups periódicos externos e valide a restauração.
 
 Após `git pull --ff-only origin main`, execute `mvn clean verify` e reinicie o servidor com `mvn spring-boot:run`, **sem recriar o H2**. O Flyway aplica a nova migração sobre o mesmo banco. Verifique a foto da etiqueta e faça um ciclo de reinicialização para testar persistência.
+
+## Etiqueta profissional para impressão térmica (v0.3.1)
+
+O formato **100 × 150 mm** foi refinado para melhorar a leitura e identificação visual:
+- Foto opcional com altura de **37 mm** e largura máxima de **75 mm**, sem recorte ou distorção.
+- Cabeçalho Rastro360 e campos de SKU, lote e quantidade agrupados para conferência.
+- QR Code preservado, em uma área quadrada de **53 × 53 mm** com fundo branco.
+- Código `RT-` impresso abaixo do QR; a URL pública e sua codificação não mudaram.
+- A folha usa `@page size: 100mm 150mm; margin: 0`. Elementos de interface não são impressos.
+
+**Como imprimir:** em **Histórico do produto**, abra o volume e clique em **Imprimir etiqueta QR**. Na caixa de impressão selecione papel **100 × 150 mm**, margens **nenhuma**, escala **100%**, sem cabeçalhos/rodapés. Em uma impressora térmica, configure o mesmo tamanho no driver. Use a pré-visualização para verificar cortes; uma prova de impressão física ainda é necessária antes de produção.
+
+A foto pode estar ausente ou indisponível sem impedir a emissão da etiqueta com QR. Esta versão é **apenas apresentação**: não altera tabelas, imagens armazenadas, produtos, volumes, remessas ou histórico de rastreabilidade. Os testes automatizados verificam a estrutura imprimível e continuam validando a decodificação do QR Code.
 
 ## Próximas funcionalidades
 
