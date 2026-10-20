@@ -54,7 +54,7 @@ O Docker Compose expõe o serviço somente em `127.0.0.1:8080`.
 
 ## Segurança e status
 
-**MVP 0.3.2 para desenvolvimento local.** Não publicar diretamente na internet com as credenciais de demonstração. Autenticação corporativa individual, RBAC, HTTPS, proteção CSRF, testes de carga e políticas de auditoria/privacidade precisam ser implementados antes de uso produtivo.
+**MVP 0.4.0 para desenvolvimento local.** Não publicar diretamente na internet com as credenciais de demonstração. Autenticação corporativa individual, RBAC, HTTPS, proteção CSRF, testes de carga e políticas de auditoria/privacidade precisam ser implementados antes de uso produtivo.
 
 > O pipeline CI executa Maven/Java 21 em cada PR e push para main; consulte o GitHub Actions para o resultado da revisão atual.
 
@@ -154,6 +154,35 @@ O layout aprovado da etiqueta de **100 × 150 mm** reserva duas colunas: foto do
 - Esta atualização modifica apenas HTML/CSS e a identificação da versão: **nenhuma nova migração, alteração de banco, upload ou recadastro é necessário**.
 
 **Validação pendente em ambiente real:** confirmar a pré-visualização do navegador, imprimir uma etiqueta e escaneá-la no celular. Os testes de CI verificam a presença do QR e estrutura da página, mas não substituem prova física de impressão e leitura.
+
+## Consulta pública pelo celular (v0.4.0)
+
+A rota **`/tracking.html?code=RT-...`** foi redesenhada para celular. O cliente pode abrir o QR Code, consultar o status atual, visualizar os eventos públicos de produção/saída/chegada/entrega, inserir manualmente um código ou compartilhar um link externo.
+
+- A página consulta **`GET /api/public/track/{code}` sem credenciais**, com `Cache-Control: no-store` e cabeçalhos contra indexação por buscadores.
+- Consulta atualizada **a cada 30 segundos** enquanto a página estiver visível e houver conexão. Também há botão **Atualizar agora** e atualização ao retornar à aba. Após a entrega confirmada, o polling para.
+- **Não é rastreio por GPS e não oferece ETA**. O conteúdo só muda quando a operação registra etapas no Rastro360; não são feitas notificações em segundo plano.
+- O público vê apenas código RT-, produto, lote, quantidade, status e eventos públicos. Não recebe nome de motorista, endereço, cliente, operador, recebedor ou fotos internas.
+- A página trata indisponibilidade de rede e conserva o último resultado válido com aviso.
+- **Nenhuma migração de banco**: o backend e as movimentações existentes continuam funcionando.
+
+### Como disponibilizar ao cliente
+
+**Não é possível usar QR Code com `localhost:8081` em outro aparelho.** A v0.4.0 prepara a experiência no celular, **mas não publica o serviço automaticamente**.
+
+Para implantação externa, configure uma instância/reverse proxy com **HTTPS válido e DNS público**, aplicando regras de rede e segurança. A exposição pública deve permitir apenas a página `/tracking.html`, os arquivos necessários ao layout, e a API `/api/public/track/**`; mantenha `/api/products/**`, `/api/units/**`, `/api/shipments/**`, `/label.html`, `/scanner.html` e a área operacional protegidos, sem expor as credenciais de desenvolvimento.
+
+No ambiente onde as etiquetas serão geradas, configure a URL pública **efetivamente acessível**:
+
+```powershell
+$env:APP_PUBLIC_BASE_URL="https://rastreio.seudominio.com.br"
+$env:PORT="8081"
+mvn spring-boot:run
+```
+
+O domínio acima é somente **ilustrativo**: é necessário configurar a infraestrutura HTTPS e garantir que o domínio sirva a consulta e sua API antes de usar as etiquetas fora do laboratório.
+
+**Fluxo de prova:** configure e teste a URL pública no navegador anônimo de um celular, confirme uma consulta sem login, gere/reeimprima a etiqueta QR e valide o mesmo link pela câmera. Teste uma transferência, a saída e a entrega: a atualização do cliente deve aparecer em até 30 segundos com a aba aberta, se houver rede. Não publique o perfil dev com usuário `operador` e senha de demonstração.
 
 ## Próximas funcionalidades
 
