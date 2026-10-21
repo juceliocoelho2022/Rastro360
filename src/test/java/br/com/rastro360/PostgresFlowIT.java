@@ -119,9 +119,10 @@ class PostgresFlowIT {
 
         assertThat(stored).startsWith((byte) 0x89, (byte) 0x50, (byte) 0x4e, (byte) 0x47);
         assertThat(imageService.image(product.id())).isEqualTo(stored);
-        assertThat(jdbc.queryForObject(
+        byte[] databaseImage = jdbc.queryForObject(
                 "SELECT image_data FROM product_image WHERE product_id = ?",
-                (rs, index) -> rs.getBytes(1), product.id())).isEqualTo(stored);
+                (rs, index) -> rs.getBytes(1), product.id());
+        assertThat(databaseImage).isEqualTo(stored);
 
         // The customer sees no internal transport details or personal data.
         mvc.perform(get("/api/public/track/" + code))
