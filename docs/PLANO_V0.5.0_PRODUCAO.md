@@ -1,6 +1,6 @@
 # Rastro360 — Plano de evolução v0.5.0 (pré-produção)
 
-**Status:** PROPOSTA PARA APROVAÇÃO — planejamento, NÃO implantação.
+**Status:** MODELO A APROVADO (cloud gerenciada + PostgreSQL); provedor, orçamento e contratação pendentes. Planejamento, NÃO implantação.
 **Última atualização:** 21/10/2026.
 **Escopo:** habilitar pilotos com clientes reais sem depender de Windows local ou de endereços trycloudflare.com efêmeros.
 
@@ -91,13 +91,31 @@ Sequenciamento pode ser reajustado para não expor endpoints sem autenticação 
 - A demonstração no celular prova o fluxo de rastreio, NÃO prova disponibilidade 24x7, backups testados ou conformidade integral com LGPD.
 - A escolha do provedor e os custos devem ser confirmados com preços atuais antes da contratação.
 
-## 6. Decisão necessária para sair do planejamento
+## 6. Decisão de arquitetura e escolha de fornecedor — 21/10/2026
 
-**Escolher uma rota de hospedagem**:
-- A — PaaS com PostgreSQL gerenciado: menos operação de servidor, custo recorrente dependente do uso.
-- B — VPS com Docker/PostgreSQL: maior controle e maior responsabilidade por segurança/backup/atualizações.
+**DECIDIDO PELO PROPRIETÁRIO:** Opção A, hospedagem cloud gerenciada com PostgreSQL, para a evolução v0.5.0. A opção de VPS administrada manualmente deixa de ser a rota principal, mas permanece possível se o orçamento não comportar o PaaS.
 
-Depois confirmar se o projeto já possui domínio. A compra/contratação só ocorre mediante autorização explícita do proprietário.
+**PROPOSTA DE PROVEDOR (AINDA NÃO CONTRATADO): Render**. O projeto já possui Dockerfile para Java 21; o Render suporta deploy pelo Dockerfile, PostgreSQL gerenciado, rede privada, HTTPS e domínios personalizados. Outra alternativa a avaliar em orçamento é Railway, mas seu preço é por consumo e o template PostgreSQL padrão é uma instância única (HA e backups precisam ser configurados separadamente).
+
+**Referência de orçamento em USD (consultada em 21/10/2026; preços podem mudar):**
+- Render demonstração paga mínima: web `0.5c-512mb` USD 7/mês + Postgres `0.1c-256mb` USD 6/mês = **USD 13/mês base**, além de armazenamento, tráfego e domínio. Memória de 512 MB e banco de 256 MB podem ser insuficientes; não é recomendação de disponibilidade comercial.
+- Render pequeno piloto mais conservador: web `1c-2g` USD 25/mês + Postgres `0.5c-1g` USD 19/mês = **USD 44/mês base**, além de armazenamento, tráfego, domínio, backups externos e tributos. Dimensionamento deve ser conferido em carga real. O plano Hobby do workspace custa USD 0 além do compute e possui janela de PITR de 3 dias em bancos pagos; isto NÃO dispensa backup independente e teste de restauração.
+- Render Postgres grátis NÃO é indicado para dados de cliente: a modalidade gratuita expira após 30 dias e pode ser excluída ao fim do período de carência.
+- Railway Hobby custa ao menos USD 5/mês (inclui USD 5 de uso), e a cobrança aumenta conforme recursos computacionais, memória, armazenamento e saída de rede. Para selecionar Railway, primeiro projetar consumo e conferir limites e a estratégia de backups.
+
+**Critérios para fechar a decisão do provedor:** orçamento mensal máximo autorizado, necessidade de dois hosts separados (rastreio público/app privado), titularidade do domínio, regras de acesso e tratamento de dados, região de hospedagem, políticas de backup, RPO/RTO e projeção de volumes/fotos. O provedor não deve ser contratado sem confirmação desses pontos.
+
+**Primeira execução técnica AUTORIZÁVEL SEM CLOUD:** construir testes de integração PostgreSQL no CI e de segurança de API, validar H2 em snapshot, elaborar ferramenta de migração não destrutiva e seu relatório de comparação. Não provisionar serviços externos, não rodar importador contra H2 original, não ativar DNS nem publicar interface operacional.
+
+Fontes oficiais de preço e recursos:
+- Render: https://render.com/pricing
+- Render Docker: https://render.com/docs/docker
+- Render backup/PITR: https://render.com/docs/postgresql-backups
+- Render Postgres grátis: https://render.com/docs/free
+- Railway planos: https://docs.railway.com/pricing/plans
+- Railway PostgreSQL: https://docs.railway.com/databases/postgresql
+
+**Próxima decisão necessária:** definir o teto mensal em USD ou BRL e confirmar se já há domínio sob controle do projeto. Comprar, contratar ou ativar serviços exige aprovação explícita do proprietário.
 
 ## Referências técnicas oficiais
 
