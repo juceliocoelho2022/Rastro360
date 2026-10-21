@@ -23,3 +23,39 @@ jobs:
       - name: Validate PowerShell script syntax
         shell: pwsh
         run: ./scripts/test-powershell-syntax.ps1
+
+  postgres-integration:
+    name: PostgreSQL 16 integration (isolated)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: rastro360
+          POSTGRES_USER: rastro360
+          POSTGRES_PASSWORD: ci-only-not-for-production
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rastro360 -d rastro360"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      RASTRO360_POSTGRES_TEST: "true"
+      DB_URL: jdbc:postgresql://127.0.0.1:5432/rastro360
+      DB_USERNAME: rastro360
+      DB_PASSWORD: ci-only-not-for-production
+      APP_USERNAME: operador
+      APP_PASSWORD: ci-only-not-for-production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Run isolated PostgreSQL integration tests
+        run: mvn -B -ntp -Dtest=PostgresFlowIT test
